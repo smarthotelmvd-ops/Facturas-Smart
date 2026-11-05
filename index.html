@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carga de Facturas — Smart Hotel</title>
+<style>
+  :root{
+    --ink:#22291f; --paper:#f6f4ee; --card:#ffffff;
+    --line:#dcd8cb; --forest:#3a5a45; --forest-dark:#274233;
+    --clay:#a3592f; --muted:#767061;
+    --ok-bg:#e7f0e6; --ok-ink:#2f5c39;
+    --warn-bg:#fbe9dd; --warn-ink:#8a4a20;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family: "Iowan Old Style","Georgia", "Times New Roman", serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .ui{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .app{max-width:640px; margin:0 auto; padding:20px 16px 80px;}
+  header{padding:6px 2px 18px; border-bottom:1px solid var(--line); margin-bottom:20px;}
+  header h1{font-size:26px; margin:0 0 4px; font-weight:600; letter-spacing:.2px;}
+  header p{margin:0; color:var(--muted); font-size:14px;}
+
+  .tabs{display:flex; gap:6px; margin-bottom:18px;}
+  .tab{
+    flex:1; text-align:center; padding:10px 0; border-radius:9px;
+    background:transparent; border:1px solid var(--line); cursor:pointer;
+    font-size:14px; font-weight:600; color:var(--muted);
+  }
+  .tab.active{background:var(--forest); color:#fff; border-color:var(--forest);}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px;}
+
+  .drop{
+    border:1.5px dashed #b9b2a0; border-radius:12px; padding:26px 16px;
+    text-align:center; cursor:pointer; background:#fbfaf6;
+  }
+  .drop:hover{border-color:var(--forest);}
+  .drop .icon{font-size:30px; margin-bottom:6px;}
+  .drop .lbl{font-weight:600; font-size:15px;}
+  .drop .sub{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  input[type=file]{display:none;}
+
+  .camrow{display:flex; gap:10px;}
+  .btn-cam{
+    flex:1; padding:16px 8px; border-radius:12px; border:1px solid var(--line);
+    background:#fbfaf6; cursor:pointer; font-size:14px; font-weight:600; color:var(--ink);
+    font-family:inherit;
+  }
+  .btn-cam-primary{background:var(--forest); color:#fff; border-color:var(--forest);}
+  #video{width:100%; border-radius:12px; margin-top:12px; background:#000;}
+
+  .preview{display:flex; gap:12px; align-items:center; margin-top:12px;}
+  .preview img{width:74px; height:74px; object-fit:cover; border-radius:8px; border:1px solid var(--line);}
+  .preview .info{font-size:13px; color:var(--muted);}
+
+  .status{
+    display:flex; align-items:center; gap:8px; font-size:13.5px; padding:10px 12px;
+    border-radius:9px; margin-top:12px;
+  }
+  .status.busy{background:#eee9db; color:var(--muted);}
+  .status.ok{background:var(--ok-bg); color:var(--ok-ink);}
+  .status.warn{background:var(--warn-bg); color:var(--warn-ink);}
+  .spinner{width:14px; height:14px; border:2px solid #ccc; border-top-color:var(--forest); border-radius:50%; animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  label{display:block; font-size:12.5px; color:var(--muted); margin:14px 0 5px; font-weight:600;}
+  label:first-of-type{margin-top:4px;}
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%; padding:11px 12px; font-size:15px; border-radius:9px;
+    border:1px solid var(--line); background:#fff; color:var(--ink); font-family:inherit;
+  }
+  input:focus, select:focus{outline:2px solid var(--forest); outline-offset:1px; border-color:var(--forest);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  .pillrow{display:flex; gap:8px; margin-top:6px;}
+  .pill{
+    flex:1; text-align:center; padding:10px 6px; border-radius:9px; border:1px solid var(--line);
+    cursor:pointer; font-size:13.5px; font-weight:600; color:var(--ink); background:#fff;
+  }
+  .pill.selected{background:var(--forest); border-color:var(--forest); color:#fff;}
+
+  .btn{
+    width:100%; padding:13px; border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; margin-top:18px; font-family:inherit;
+  }
+  .btn-primary{background:var(--forest); color:#fff;}
+  .btn-primary:disabled{background:#b7c2ba; cursor:not-allowed;}
+  .btn-secondary{background:transparent; border:1px solid var(--line); color:var(--ink);}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th{text-align:left; padding:8px 6px; border-bottom:2px solid var(--line); color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase;}
+  td{padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  .num{text-align:right; font-variant-numeric:tabular-nums;}
+  .origen-tag{font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:20px;}
+  .origen-bar{background:#e7f0e6; color:#2f5c39;}
+  .origen-hotel{background:#e6eef2; color:#2c5a70;}
+  .del{color:var(--clay); cursor:pointer; font-size:12px; font-weight:600; background:none; border:none; padding:0;}
+  .empty{text-align:center; color:var(--muted); padding:30px 10px; font-size:13.5px;}
+  .toolbar{display:flex; gap:8px; margin-bottom:14px;}
+  .toolbar select{width:auto; flex:1;}
+  .count{font-size:12.5px; color:var(--muted); margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="app ui">
+  <header>
+    <h1>Carga de Facturas</h1>
+    <p>Smart Hotel · Prueba casera (Gemini + Google Sheets)</p>
+  </header>
+
+  <div class="card" id="configCard" style="display:none;">
+    <label style="margin-top:0;">Clave de API de Gemini</label>
+    <input type="text" id="cfgApiKey" placeholder="Pegar acá la clave de aistudio.google.com">
+    <label>URL del Web App de Google Apps Script</label>
+    <input type="text" id="cfgScriptUrl" placeholder="https://script.google.com/macros/s/..../exec">
+    <button class="btn btn-primary" onclick="guardarConfig()">Guardar configuración</button>
+  </div>
+  <div class="toolbar" style="margin-bottom:14px;">
+    <button class="btn-cam" style="flex:none; padding:8px 14px; font-size:12.5px;" onclick="toggleConfig()">⚙️ Configuración</button>
+    <span id="baseInfo" style="align-self:center; font-size:12px; color:var(--muted);"></span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabCargar" onclick="showTab('cargar')">Cargar factura</div>
+    <div class="tab" id="tabLista" onclick="showTab('lista')">Ver cargadas</div>
+  </div>
+
+  <!-- ===== TAB CARGAR ===== -->
+  <div id="panelCargar">
+    <div class="card">
+      <div class="camrow">
+        <button class="btn-cam" id="btnCamara" onclick="abrirCamara()">📷 Usar cámara</button>
+        <button class="btn-cam" onclick="document.getElementById('fileInput').click()">🖼️ Elegir imagen</button>
+      </div>
+      <div id="camaraWrap" style="display:none;">
+        <video id="video" autoplay playsinline></video>
+        <div class="camrow" style="margin-top:8px;">
+          <button class="btn-cam btn-cam-primary" onclick="capturarFoto()">Capturar</button>
+          <button class="btn-cam" onclick="cerrarCamara()">Cancelar</button>
+        </div>
+      </div>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <div class="sub" style="margin-top:8px; text-align:center;">Si "Usar cámara" no funciona en esta vista, abrí este archivo directo en el navegador del celular (no en el visor del chat), o sacá la foto con la app de Cámara y elegila con "Elegir imagen".</div>
+      <input type="file" id="fileInput" accept="image/*">
+      <div id="previewWrap"></div>
+      <div id="statusWrap"></div>
+    </div>
+
+    <div class="card" id="formCard" style="display:none;">
+      <label>Origen</label>
+      <div class="pillrow">
+        <div class="pill" data-val="BAR AMERICANO" onclick="selectPill(this,'origen')">Bar Americano</div>
+        <div class="pill" data-val="HOTEL" onclick="selectPill(this,'origen')">Hotel</div>
+      </div>
+
+      <label>Proveedor</label>
+      <input type="text" id="fProveedor" list="proveedoresList" placeholder="Nombre del proveedor" oninput="mostrarMetodoAcordado()" onchange="cruzarRutConBase('nombre')">
+      <div id="metodoHint" class="sub" style="margin-top:4px;"></div>
+
+      <label>RUT del proveedor</label>
+      <input type="text" id="fRut" placeholder="000000000000" onchange="cruzarRutConBase('manual')">
+      <div id="rutHint" class="sub" style="margin-top:4px;"></div>
+      <datalist id="proveedoresList"></datalist>
+
+      <div class="row2">
+        <div>
+          <label>N° de factura</label>
+          <input type="text" id="fNumero" placeholder="0000">
+        </div>
+        <div>
+          <label>Fecha de factura</label>
+          <input type="date" id="fFecha" onchange="mostrarAvisoFecha()">
+          <div id="fechaHint" class="sub" style="margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Moneda</label>
+          <select id="fMoneda">
+            <option value="UYU">UYU</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        <div>
+          <label>Importe</label>
+          <input type="number" step="0.01" id="fImporte" placeholder="0.00">
+        </div>
+      </div>
+
+      <label>Sector</label>
+      <input type="text" id="fSector" placeholder="Ej: Bar, Cocina, Mantenimiento...">
+
+      <label>Método de pago</label>
+      <select id="fMetodo">
+        <option value="">Elegí el método de pago...</option>
+        <option value="Crédito">Crédito</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Cheque">Cheque</option>
+        <option value="Caja Chica Hotel">Caja Chica Hotel</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Otro">Otro</option>
+      </select>
+
+      <label>Comentario (opcional)</label>
+      <input type="text" id="fComentario" placeholder="Productos, observaciones...">
+
+      <button class="btn btn-primary" id="btnGuardar" onclick="guardarFactura()">Guardar factura</button>
+      <button class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- ===== TAB LISTA ===== -->
+  <div id="panelLista" style="display:none;">
+    <div class="toolbar">
+      <select id="filtroOrigen" onchange="renderLista()">
+        <option value="">Todos los orígenes</option>
+        <option value="BAR AMERICANO">Bar Americano</option>
+        <option value="HOTEL">Hotel</option>
+      </select>
+      <button class="btn btn-secondary" style="margin:0; width:auto; padding:9px 14px; font-size:13px;" onclick="descargarCSV()">Descargar CSV</button>
+    </div>
+    <div class="count" id="countLbl"></div>
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table id="tablaFacturas">
+        <thead>
+          <tr><th>Fecha</th><th>Origen</th><th>Proveedor</th><th>N°</th><th class="num">Importe</th><th>Método</th><th></th></tr>
+        </thead>
+        <tbody id="tbodyFacturas"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg" style="display:none;">Todavía no hay facturas cargadas.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Lista de respaldo: se usa solo si no se puede leer la base central.
+let PROVEEDORES = ["*OM - Carrau Mendez Paz Luis Agustin", "ABEL RODRIGUEZ - RAICES", "ABESSOR SA", "ABORGAMA- DULCELIT", "ACAMAR S.A.", "ACAMAR SA", "ACOPOCITOS SAS", "ACRA EQUIPAMIENTOS SAS", "ADAMOLI", "ADERAL SA", "AGADU", "AHRU", "ALBANELL MEZZOTTONI JUAN ANDRES", "ALSI LTDA", "ALVAREZ FEDERICO SEBASTIAN", "ANCAL SA", "ANDRES RODRIGUEZ", "ARROYOS AZULES S.A.", "ASCENSORES OTIS DEL URUGUAY SA", "ASISTENCIAL MÉDICA DEPARTAMENTAL DE MALDONADO - IAMPP", "ATLANTICA GOURMET SRL", "AVICOLA ROSAFE S.A.S.", "Abelenda Hermanos", "Abitab SA", "Acuamar", "Administración Nacional de Telecomunicaciones", "Administración Nacional de Usinas y Transmisiones Eléctricas", "Administración de las Obras Sanitarias del Estado", "Adrian Inthamoussu", "Advocavi SA", "Agroland SA", "Air Europa Lineas Aereas Sociedad Anonima Unipersonal", "Airontry S.A", "Alambique SA", "Alcaraz Sociedad Anonima", "Aldana Machado", "Almar SA", "Almena S.A.", "Altama S.A", "Aluminios del Uruguay S.A.", "Alvaro Blanc", "Amanda", "Ameritur S.A.", "Andres Gabriel Mikola Yannuzzi", "Annamaria Dominici Y Dasha Bujinsky", "Ariel Fernando Mendez Aliverti", "Ariel Rivero", "Ariel guillermo Musto", "Aryes Ltda", "Ascensores Schindler S.A.", "Autoctona SRL", "Automatismos ROMA SA", "BAFICOR", "BAFICOR SA", "BARENOF S.A", "BAROLI ASQUETA SEBASTIAN ABEL", "BARRIOS CHAMORRO NICOLAS SANTIAGO", "BASICENTER SA", "BELLO TRILLES VIVIANA LUCIA", "BETBEDER Y GOLFARINI LTDA*", "BICISUR SAS", "BIRLENO SA", "BLANC DALIES ALVARO ALEJANDRO", "BLIZNIUK ALDANA Y SALAYA VARTANIAN MARIA ELENA", "BLIZNIUK FEDERICO Y PERLINGER MARIA BELEN", "BODEGA CERRO DEL TORO S.A", "BOIGUE S. A.", "BORGES GODONI PABLO TABARE", "BOWEREY S.A.", "BRESESTI SRL", "BRISOLAR LTDA.", "BRITOS IHITZ SEBASTIAN EDUARDO", "Badenur SA", "Banco de Seguros del Estado", "Basta Srl", "Bazar y Ferreteria Soriano S.A.S", "Beatriz y Natalia San Miguel", "Belem S.A", "Bemaor S.A", "Berkley International Seguros S.A", "Bicicletas Chemello Ltda", "Bikova SA", "Blodwen SA", "Bodega Cerro Del Toro Sociedad Anonima", "Bodega Marichal e Hijo Ltda", "Boltaña SA", "Booking", "Booking.com B.V.", "Bosch Ci S.A.", "Buonafina Calefaccion SRL", "C.A.Mosc Y Ci S.R.L.", "CABANAS NAVARRO ANA ALEJANDRA Y BRITO CABRERA AGUSTIN PABLO", "CABILO S.A.", "CABRERA SIERRA ROMINA", "CALAFATE SA", "CALDERTEK SAS", "CASTIGLIONI NUÑEZ SAS", "CAVICA SRL", "CENTRO DE HOTELES Y AFINES", "CHICHIRALDI S.A", "CIBENCAR S.A.", "CICORDI SAS", "CINAMON URUGUAY S.A.S", "CLOUDSOFT SAS", "COBOE S.A.", "COMPAÑÍA OMNIBUSERA DEL ESTE SA", "COOPERATIVA DE TRABAJO PRODUCTORES DEL ESTE", "CPA Fumigaciones S.A.", "CUDER S.A", "Cabilo S.A", "Cablevision Pan De Azucar Ltda", "Cameril SA", "Carle y Andrioli", "Carrau & Compañía SA", "Casa Castilla SAS", "Casa Pirque S.A", "Cen.de info.al Comerciante SRL", "Cepas Uruguay SA", "Cercido, López y Cia. S.A.", "Cesar Pisano e Hijos S.A.", "Chacras del Sur S.A", "Chic Parisien S.A.", "Cielo Natural S.A.", "Cirlon S.A.", "Clavijo Acosta Hector Fabian", "Climatizacion integral SA", "Comitan S.A", "Compañía Oriental de Transporte S.A.", "Compañía de Indias Ltda", "Cooperativa de Trabajo Unisiete MB unif", "Crisol Productos SAS", "Cárnicos del Sur SRL", "DALENE SA", "DANTIROL S.A.", "DE GUARDA SA", "DECOSOL S.A.", "DEL RIO ACQUISTAPACE SANTIAGO CARLOS Y VELAZQUEZ BERACOCHEA MALVINA ILIANA", "DELIVERY HERO URUGUAY MARKETPLACE S.A.", "DEVOTO HNOS  HOME", "DHL", "DIAMANFIELD S.A", "DIAZ MARTINEZ ENRIQUE NELSON", "DIRECTV de Uruguy Ltd.", "DIVINO S.A", "DON GROSSO SRL", "DORILAR SA", "Damian Bersani", "Daniel Garat", "Daniel Gonnet", "De Las Sierras S.A", "Debifox S.A.", "Deknil SA", "Desiderio SAS", "Distriblanco SAS", "Distribuidora Cuareim SRL", "Distribuidora El Mar SAS", "Distribuidora de Gas de Montevideo S.A.", "Dizaba SAS", "Dorilar S.A", "Drelar SA", "Droguería Paysandú S.A.", "Dumasa", "ECOLAB SRL", "ELGORRIAGA SRL", "EMILIO BENZO S.A.", "EMME SISTEMAS S.A.", "ENRIQUE TECHEA", "EPULTER COMPANY S.A.", "EQUIND LTDA", "EQUITEC CONTROL SAS", "ESTURIONES DEL RIO NEGRO S A", "EXTINTORES DEANDREA SRL", "Eduver SAS", "El Area 501 SRL", "Emestudio Ltda", "Emilio Benzo SA", "Enko SA", "Entre Frutas SAS", "Equilimp S.A.", "Ernesto Singer", "Ernesto Singer y Paola Singer", "Escamilla Marrero Willian Jesus", "Escaramuza SRL", "Espinosa Andres Martin", "Exoticos SAS", "Expedia", "Extintores Centenario SAS", "FABAMOR S.A. - Vector", "FAGRIL SOCIEDAD ANONIMA", "FALCON ACOSTA ADRIAN CLAUDIO", "FARIELLO LOPEZ MARIA PAULA", "FARMACIA ANDES S.R.L.", "FELISPARK S.A.", "FELIX JOSE FRANCISCO", "FERNANDEZ ROMERO SEBASTIAN MIGUEL Y FERNANDEZ JONES CANDELA", "FIERRO VIGNOLI S.A.", "FILA 13 S.A.S.", "FIMARAN PUNTA COLORS", "FINESA TRADING SA", "FONBAY SRL", "FORMAGGIO LIMITADA", "FRAMBEL URUGUAY SAS", "Fabio Neves y Carolina de Oliveira", "Facal", "Fantasia", "Federica Vila Varela", "Federico German Gasperi Busto", "Felix Jose Francisco", "Feral S.A", "Ferniland sa", "Ferrifaro", "Ferval productos naturales sas", "Festylend s.a.", "Fibanel", "Fideicomiso Inmobiliario Casa Grande", "Fielex S.A.", "Fika Textil SAS", "Filgueira y Garmendia S.R.L.", "Fioreste SRL", "Florencia Sitya", "Focus Iluminacion SRL", "Francisco Leonardo Montero", "Friopan SA", "Fulgencio SRL", "GADATIL SA", "GALINA S.A", "GLOBALIX SAS", "GOMEZ ETCHEVERRY CRISTOPHER BRIAN", "GRAND CRU SA", "GRANJA JESUS SRL", "GRANJA LA CUMBRE S.R.L.", "GREENLAB PACKING SAS", "GROUPLAND SA", "GRUPO SEPTIEMBRE SAS", "GRUPO TEXSUR SRL", "GUAYMA SOCIEDAD ANONIMA", "Gabeler S.A.", "Garcia Pablo Daniel", "Gardonbikes SAS", "Gelezoglo Pugliese Vanessa Lucia", "General Foods Srl", "Geocom Uruguay", "Glensud SA", "Goldsky SA", "Gomez De Leon Kevin Fernando", "Gonzalez Rosso Ltda", "Gonzalo Montaño Paullier", "Graba S.A.", "Grandes Tiendas Montevideo S.A.", "Grant Thornton SC", "Gustabo Barreto", "HELADOS NATURALES SAS", "HFNet SAS", "HIELO Y VINOS DEL ESTE SRL", "HOLIDAYS S.A.", "HOMECENTER SODIMAC S.A", "Henderson Y Cia. S.A.", "Hernandez Mediza Alicia", "Herrera Nicolás y otros ( Guyer & Regules)", "Hidroservice", "IBERPARK S.A.", "IGNACIO VELAZQUEZ", "IKIGAI UY SAS", "INES ANEGON CAMOU", "IPL LTDA", "Iberpark", "Iclan S.A.", "Industrias Alimenticias del Plata S.A", "Industrias Pesqueras Valymar S.A", "Ingeniería Schellemberg Srl", "Innova Group SAS", "Invariable S.A.", "Itzaina Y Otros S.R.L.", "JBDOS SA", "JORGE GAMENTHALER Y TECHERA CARLOS", "JOWYN SA", "JS Ltda.", "Jaspe S.A.", "Jaureguy Fernandez Maria Rosario", "Jose Abreu", "Jose Maria Facal & CIA", "Jose Pedro Cuezzo", "José Mario Fassanello", "José María Facal & Cía", "Juan Farina Deltadil", "Juan Pablo Sellanes", "Juan Ramón Correa Campagne", "Juan Reyes", "Juana La Loca SRL", "Julio Ramírez y Cia S.A.", "KIMDAN SA", "KTB S.R.L", "Kali SA", "Kentia SAS", "Kintamel SA", "LA ASISTENCIAL MEDICA MALDONADO", "LA GARZA MORA SAS", "LA MOLIENDA PRODUCTOS NATURALES SAS", "LA VIGNA S.R.L.", "LABON SRL", "LANPONT S.A.", "LANSIDE SRL", "LANYVEL", "LE MAJESTIC SA", "LOS DOMINGUEZ SA", "LOS FUNDADORES NH SAS", "LUCIERNAGA AZUL SA", "LUIS HOUNIE", "LUISSI", "LUMIFORE SA", "LUNCHON TICKET", "LUSCHER SUPERGA GERMAN", "La Aurora", "La Dietetica SA", "La Estacion", "La Organica SAS", "La Sanitaria SA", "Lalka SA", "Landarea SRL", "Larrique Rulemanes S.A.", "Latam SA", "Le Crayon SRL", "Librosol S.A.", "Linn y CIA", "Linn y Cia S.A.", "Lisley S.A", "Livelux SA", "Locode SRL", "Logsur S.A.", "Los Delfines", "Los Rodriguez Distribuciones", "Luncheon Tickets SA", "M3Aires SAS", "M3aires SAS", "MACFISAN", "MACHADO GUERRA ALDANA", "MACROMERCADO MAYORISTA S.A.", "MADICK S A", "MALCAR SRL", "MAMARONECK SAS", "MARIA JESUS MONTANO", "MARIANA LAURA FRUGONI NODAR", "MARIANELLA INVIDIO Y OTROS", "MASNIR S.A (DESIGN)", "MAURICIO MARTINEZ", "MED TERMOMECANICA S.A.", "MEDIFAR LTDA.", "MELIANTE RODRIGUEZ DIEGO ADRIAN", "MERCEDES IPHARAGUERRE", "MERCOVENTA SRL", "MGL LTDA", "MI DINERO", "MIDRAS SA", "MIMVE SAS", "MIMVE sas", "MOAC SRL", "MOLDES RUIBAL SA", "MONTE CABLEVIDEO S.A.", "MONTELONGO ODLLAKOVICH CRISTIAN MARCEL", "MORALES FERREIRA PATRICIA", "MORI BARCELO PATRICIA ELIZABETH", "MORI ELIZABETH", "MOTINI SRL", "Mabipark SA", "Macfisan S.A.", "Madebar sa", "Maiha S.R.L", "Malmogreen - Julieta Verdie", "Malmogreens SAS", "Mar Austral S.R.L.", "Marcelo Ligouri", "Marcelo Scelza", "Maria Magdalena Hernandez", "Mariela Joseline Castro Costa", "Mario Perotti", "Martínez Debali y Pérez Tugores", "Maruby S.A", "Mary Celia Machado Olivera", "Masterland SA", "Matias Galeano Sussanich", "Mauricio Javier Cendan y Maria", "Mauricio Peyro", "Maximiliano Garcia", "Maxsan SAS", "Media Lunas del Este", "Mello Soledad Valeria", "Mendiburu Cuadrado Hyara Valentina", "Mercados Devoto S.A.", "Metropolis Films S.A.", "Micrus S.A", "Miraballes Marmo Martin", "Miss y Alarcon S.R.L.", "Misurol S.A.", "Molak SA", "Molino Cañuelas Uruguay S.A.", "Montevideo Refrescos S.R.L.", "Morales Caceres Ricardo", "Mosca", "Mosca Hnos. SA", "Mountline S.A.", "Mundano SAS", "NELOMA SAS", "NOBLE FURTADO GEHILA LILIANA", "NORDICA  S.A.", "NOUTER S.A.", "NXT", "Natalia Perez", "Natalia Quintero", "Neloma SAS", "Niagara SRL", "Nilecor SA", "Niter S.A", "Nitiland SA", "Noé Bonino Valentín, Tecco Rojas Nicolás Luis y otros", "ONE LTDA", "ORBITAX SA", "OSAN SA", "PABLO DAVID COMBE CABRERA", "PAPELERIA FLOBER SRL - POCITOS", "PARKSUR SA", "PEDRO G ZUBIZARRETA S A", "PHOENIX S.A.", "PINTURAS INDUSTRIALES", "PIO OTEGUI GASTON EDUARDO", "PLADA MASAGUEZ SANDRA JACQUELINE", "PLAZA PAPEL SAS", "POLAKOF Y CIA SOCIEDAD ANONIMA", "PONTYN SOCIEDAD ANONIMA", "POTREROS DEL OESTE SAS", "PQUICKER SOCIEDAD POR ACCIONES SIMPLIFICADA", "PRAKELIR S.A.", "PREMILAR S.A.", "PROCOM UY SRL", "PROSPER MONT", "PUNTA PLANOS S.R.L.", "Pablo Escayola y Julio Delgado", "Panificadora Bimbo del Uruguay", "Panpanpan SAS", "Papeleria Aldo SA", "Paraje Diamante S.A.", "Perez Ghan Mauro Gabriel", "Phoenix S.A", "Pintelux Paintings S.A.", "Pirotto Larrañaga Claudio", "Plertys S.A.", "Pura palta Sas", "Puratos Uruguay SA", "QUINTA Y BRUNO SRL.", "Quimtex", "RAYCOM", "RECAHO S.A.S", "REFRICOM URUGUAY SAS", "RIBILDAN S.A", "RIOGAS S.A.", "RIOSAY S A", "RODRIGUEZ FERNANDEZ DIEGO MANUEL Y DI LORENZO MALMIERCA TOMAS", "ROJAS MACHADO KAREN LOANA Y AYALA GOMEZ BRENDA NICOLE", "Rawy Living Foods Ltda", "Redplan S.A.", "Reverdecer Este SRL", "Ricardo Morales Caceres", "Rilfort S.A", "Rinvil SA", "Rodriguez Gonzalez Monica Beatriz", "Rollos Roldem SAA", "Rondanels S.A.", "S. A. LA GALLEGA", "S.T.I LTDA ROOSEVELT", "SAFIMAR LTDA", "SAFY S.A.", "SALVARREY MANRIQUE KEVIN HERNAN", "SANTURIO ROSANO MARIA CRISTINA", "SHERWIN WILLIAMS URUGUAY S.A.", "SMIRNA", "SOCIEDAD INVERSORA GANADERA ORIENTAL SA", "SUAREZ AYUSTO JENRRY NELSON", "Sabre International Uruguay", "Samioc SAS", "Sanchez Techera Victor Ricardo", "Santa Clara SRL", "Santiago Echavalete", "Scatey S.A - Rodrigo Cabral", "Schaffner Holzer Erich Gerardo y Vila Curbelo Olga Graziella", "Sebastián Llanes Ríos", "Securitas Sistemas S.A.", "Seguros Sura S.A.", "Silverled SAS", "Silvia Daniela Rodriguez Curbelo", "Sociedad Anonima Molinos Arroceros Nacionales", "Soldo Hnos", "Sommeliers Sas", "Sonibel S.A.", "Su Taller Ltda", "Sultanar S.A.", "Supermercados Disco del Uruguay S.A.", "Susana Bonilla", "Susana Maria Folchi Patriarca", "Sysbro SRL - Suarez y Suarez", "T Y T DE MARTINI LTDA.", "TAKODA S.A.", "TEBALSUR SA", "TECMEDIC", "TEXOIL S.A", "THOMPSON", "TORN FAGUNDEZ YURI DANIEL", "TPC S.A.", "TRANSPORTADORA POCITOS S R L", "TRAPOVEN DEL URUGUAY LTDA", "TRONEM S.A.", "Tata S.A.", "Tavera Kornas Klaudia Maria", "Tecnicor s.a.", "Tecnologia en Seguridad SRL", "Telefónica Móviles del Uruguay S.A", "Teolyn Sociedd Anoni.", "Ticelux", "Tilsen SA", "Tioma S.A.", "Tomás Magariños SAS", "Tort Adhesivos Ltda.", "Tractoral SA", "Tv cable del este", "ULTRALUX", "URUEÑA BANCOFF ALBERTO ALEXANDER", "Ulises del Capellan", "Ultrlux", "Urbanova", "Urfred SA", "VALDIK S.A.", "VARELA HNOS. SA", "VEINTISIETE S.A.S", "VEREFRIL S.A.", "VIDRIERIA BIA S.A.", "VIDRIERIA URUGUAY-FREDY", "VIMPEL S.A", "VIÑA EDÉN S.A.", "Valentina Lutegui", "Valls Sposito Gabriel", "Vimar", "Vimax", "WINE SRL", "WINESELECT SRL", "WSL S.R.L.", "Warel S.A.S.", "Wilson Murana", "Wine SRL", "YEVASTAR SAS", "ZAFAR S.R.L.", "ZANANDREA ROJAS GUZMAN", "carrasquera riva martha corina y rostan rostan nestor eduardo"];
+
+// Método de pago acordado por proveedor — solo como referencia informativa,
+// NUNCA se autocompleta: el método real puede cambiar según cuándo se pague de hecho
+// (ej: proveedor de contado pero factura de fin de mes pagada al mes siguiente = crédito).
+let METODO_ACORDADO = {"Distriblanco SAS": "CREDITO MES VENCIDO", "Fantasia": "CONTADO", "VARELA HNOS. SA": "CREDITO MES VENCIDO", "Bemaor S.A": "CREDITO MES VENCIDO", "Soldo Hnos": "CREDITO MES VENCIDO", "La Sanitaria SA": "mes en curso", "Kali SA": "CREDITO MES VENCIDO", "Dumasa": "CREDITO MES VENCIDO", "ANCAL SA": "CREDITO MES VENCIDO", "Tilsen SA": "CREDITO MES VENCIDO", "S. A. LA GALLEGA": "CREDITO MES VENCIDO", "DALENE SA": "CREDITO MES VENCIDO", "Redplan S.A.": "CREDITO MES VENCIDO", "SAFY S.A.": "CREDITO MES VENCIDO", "GRUPO TEXSUR SRL": "CREDITO MES VENCIDO", "MARIANA LAURA FRUGONI NODAR": "CREDITO MES VENCIDO", "LABON SRL": "CREDITO MES VENCIDO", "Livelux SA": "mes en curso", "Ariel guillermo Musto": "CREDITO MES VENCIDO", "BIRLENO SA": "CREDITO MES VENCIDO", "ECOLAB SRL": "CREDITO MES VENCIDO", "Agroland SA": "CREDITO MES VENCIDO", "LANYVEL": "CREDITO MES VENCIDO", "Glensud SA": "CREDITO MES VENCIDO", "GROUPLAND SA": "CREDITO MES VENCIDO", "Alambique SA": "CREDITO MES VENCIDO", "Sebastián Llanes Ríos": "CREDITO MES VENCIDO", "WINESELECT SRL": "CREDITO MES VENCIDO", "SAFIMAR LTDA": "CREDITO MES VENCIDO", "IPL LTDA": "CREDITO MES VENCIDO", "GRAND CRU SA": "CREDITO MES VENCIDO", "ARROYOS AZULES S.A.": "CREDITO MES VENCIDO", "LUMIFORE SA": "30 DIAS FECHA FACTURA", "ACAMAR SA": "CREDITO MES VENCIDO", "Tecnicor s.a.": "30 dias", "Madebar sa": "CREDITO MES VENCIDO", "Susana Maria Folchi Patriarca": "CREDITO MES VENCIDO", "GADATIL SA": "CREDITO MES VENCIDO", "TEBALSUR SA": "CREDITO MES VENCIDO", "FINESA TRADING SA": "CREDITO MES VENCIDO", "TAKODA S.A.": "CREDITO MES VENCIDO", "BOIGUE S. A.": "CREDITO QUINCENAL", "VIÑA EDÉN S.A.": "CREDITO MES VENCIDO", "RIBILDAN S.A": "CREDITO MES VENCIDO", "Gonzalo Montaño Paullier": "CREDITO MES VENCIDO", "Reverdecer Este SRL": "CREDITO MES VENCIDO", "LANSIDE SRL": "CREDITO MES VENCIDO", "Pablo Escayola y Julio Delgado": "CREDITO MES VENCIDO", "FRAMBEL URUGUAY SAS": "CREDITO MES VENCIDO", "Juan Ramón Correa Campagne": "CREDITO MES VENCIDO", "Sommeliers Sas": "CREDITO MES VENCIDO", "Tomás Magariños SAS": "CREDITO MES VENCIDO", "Ferval productos naturales sas": "CREDITO MES VENCIDO", "CALDERTEK SAS": "CREDITO MES VENCIDO", "Pura palta Sas": "CREDITO MES VENCIDO", "Entre Frutas SAS": "CREDITO MES VENCIDO", "MIMVE sas": "CREDITO MES VENCIDO"};
+
+function normalizarNombre(s){
+  return (s||'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\b(S A|SA|SAS|SRL|S R L|LTDA)\b/g,'').replace(/\s+/g,' ').trim();
+}
+
+function distanciaLevenshtein(a, b){
+  const m = a.length, n = b.length;
+  const d = Array.from({length: m+1}, (_, i) => [i, ...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++) d[0][j] = j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      d[i][j] = Math.min(
+        d[i-1][j] + 1,
+        d[i][j-1] + 1,
+        d[i-1][j-1] + (a[i-1]===b[j-1] ? 0 : 1)
+      );
+    }
+  }
+  return d[m][n];
+}
+
+let PROVEEDORES_NORM = PROVEEDORES.map(p => ({ original: p, norm: normalizarNombre(p) }));
+
+// ---- Cruce de RUT con el Maestro de proveedores ----
+// RUT del propio hotel (comprador): nunca puede ser el RUT del proveedor.
+const RUT_PROPIO = '216819310017';
+const NOMBRE_HOTEL = 'Smart Hotel (Prosper Mont)';
+let RUT_POR_NOMBRE = {};   // nombre normalizado -> RUT (12 dígitos)
+let NOMBRE_POR_RUT = {};   // RUT -> nombre en la base
+let rutDeshacer = null;    // para el botón "Deshacer"
+
+function rut12(s){
+  const d = String(s || '').replace(/\D/g, '');
+  return (d.length >= 9 && d.length <= 12) ? d.padStart(12, '0') : d;
+}
+// Dígito verificador del RUT uruguayo
+function rutValido(r){
+  if(!/^\d{12}$/.test(r)) return false;
+  const w = [4,3,2,9,8,7,6,5,4,3,2];
+  let s = 0; for(let i=0;i<11;i++) s += w[i] * +r[i];
+  let dv = 11 - (s % 11); if(dv === 11) dv = 0; if(dv === 10) return false;
+  return dv === +r[11];
+}
+function armarIndicesRut(lista){
+  RUT_POR_NOMBRE = {}; NOMBRE_POR_RUT = {};
+  (lista || []).forEach(p => {
+    const r = rut12(p.rut);
+    if(!rutValido(r) || r === RUT_PROPIO) return;
+    const k = normalizarNombre(p.nombre);
+    if(k && !RUT_POR_NOMBRE[k]) RUT_POR_NOMBRE[k] = r;
+    if(!NOMBRE_POR_RUT[r]) NOMBRE_POR_RUT[r] = p.nombre;
+  });
+}
+
+// modo: 'foto' (recién leída), 'nombre' (eligieron proveedor), 'manual' (escribieron el RUT)
+function cruzarRutConBase(modo){
+  const fP = document.getElementById('fProveedor');
+  const fR = document.getElementById('fRut');
+  const hint = document.getElementById('rutHint');
+  if(!fP || !fR || !hint) return;
+  hint.innerHTML = '';
+  const nombre = fP.value.trim();
+  const leido = rut12(fR.value);
+  const rutBase = RUT_POR_NOMBRE[normalizarNombre(nombre)];
+  const deshacer = (campo, valor) => {
+    rutDeshacer = { campo, valor };
+    return ` <button type="button" style="border:none;background:none;color:var(--forest);text-decoration:underline;cursor:pointer;font-size:12.5px;" onclick="deshacerCruceRut()">Deshacer</button>`;
+  };
+  const ok = t => `<span style="color:var(--forest); font-weight:600;">${t}</span>`;
+  const warn = t => `<span style="color:var(--warn-ink); font-weight:600;">${t}</span>`;
+
+  // A) El proveedor está en la base: manda el RUT de la base
+  if(rutBase){
+    if(leido === rutBase) return;
+    if(modo === 'manual'){
+      hint.innerHTML = warn(`⚠️ En la base, ${escapeHtml(nombre)} tiene RUT ${rutBase}.`) +
+        ` <button type="button" style="border:none;background:none;color:var(--forest);text-decoration:underline;cursor:pointer;font-size:12.5px;" onclick="document.getElementById('fRut').value='${rutBase}'; cruzarRutConBase('nombre');">Usar el de la base</button>`;
+      return;
+    }
+    const antes = fR.value;
+    fR.value = rutBase;
+    let txt = antes
+      ? `🔄 RUT corregido según la base de proveedores (la foto decía ${escapeHtml(antes)})`
+      : `🔄 RUT completado desde la base de proveedores`;
+    const otro = NOMBRE_POR_RUT[leido];
+    if(otro && normalizarNombre(otro) !== normalizarNombre(nombre)){
+      txt += ` — ojo: ese RUT es de "${escapeHtml(otro)}", revisá que el proveedor sea el correcto`;
+    }
+    hint.innerHTML = ok(txt) + deshacer('rut', antes);
+    return;
+  }
+
+  // B) El nombre no está en la base pero el RUT sí: se usa el nombre de la base
+  if(leido && NOMBRE_POR_RUT[leido]){
+    const nombreBase = NOMBRE_POR_RUT[leido];
+    if(modo === 'nombre' && nombre){
+      hint.innerHTML = warn(`⚠️ Ese RUT corresponde a "${escapeHtml(nombreBase)}" en la base.`);
+      return;
+    }
+    fP.value = nombreBase;
+    mostrarMetodoAcordado();
+    hint.innerHTML = ok(`🔄 Proveedor identificado por RUT: "${escapeHtml(nombreBase)}"` +
+      (nombre ? ` (la foto decía "${escapeHtml(nombre)}")` : '')) + deshacer('proveedor', nombre);
+    return;
+  }
+
+  // C) Controles cuando no hay coincidencia en la base
+  if(leido && leido === RUT_PROPIO){
+    hint.innerHTML = warn(`⚠️ Ese es el RUT de ${NOMBRE_HOTEL} (el comprador). Poné el RUT del proveedor que figura arriba en la factura.`);
+  } else if(leido && !rutValido(leido)){
+    hint.innerHTML = warn(`⚠️ El RUT no es válido (son 12 dígitos y el último es de control). Revisalo contra la factura.`);
+  }
+}
+
+function deshacerCruceRut(){
+  if(!rutDeshacer) return;
+  if(rutDeshacer.campo === 'rut') document.getElementById('fRut').value = rutDeshacer.valor;
+  else { document.getElementById('fProveedor').value = rutDeshacer.valor; mostrarMetodoAcordado(); }
+  rutDeshacer = null;
+  document.getElementById('rutHint').innerHTML = '';
+}
+
+function mostrarMetodoAcordado(){
+  const nombreCrudo = document.getElementById('fProveedor').value.trim();
+  const hint = document.getElementById('metodoHint');
+  const metodo = METODO_ACORDADO[nombreCrudo];
+  const hintMetodo = metodo ? `Método habitual de este proveedor: ${metodo} (revisá si corresponde según la fecha real de pago). ` : '';
+
+  hint.innerHTML = '';
+  let hintTexto = hintMetodo;
+
+  if(nombreCrudo.length >= 3){
+    const norm = normalizarNombre(nombreCrudo);
+    const existe = PROVEEDORES_NORM.some(p => p.norm === norm);
+    if(!existe){
+      let mejor = null, mejorDist = Infinity;
+      for(const p of PROVEEDORES_NORM){
+        const dist = distanciaLevenshtein(norm, p.norm);
+        if(dist < mejorDist){ mejorDist = dist; mejor = p; }
+      }
+      const umbral = Math.max(2, Math.floor(norm.length * 0.3));
+      if(mejor && mejorDist <= umbral){
+        hint.innerHTML = `${hintTexto}<span style="color:var(--warn-ink); font-weight:600;">⚠️ No está exacto en la base — ¿quisiste decir "${escapeHtml(mejor.original)}"?</span> <button type="button" style="border:none;background:none;color:var(--forest);text-decoration:underline;cursor:pointer;font-size:12.5px;" onclick="document.getElementById('fProveedor').value='${mejor.original.replace(/'/g,"\\'")}'; mostrarMetodoAcordado(); cruzarRutConBase('nombre');">Usar este</button>`;
+        return;
+      } else {
+        hintTexto += `⚠️ Este proveedor no está en la base — revisá que el nombre esté bien escrito. Si es nuevo, al guardar queda registrado para revisión de administración.`;
+      }
+    }
+  }
+  hint.innerHTML = hintTexto;
+}
+
+function poblarDatalist(){
+  const dl = document.getElementById('proveedoresList');
+  dl.innerHTML = '';
+  PROVEEDORES.slice().sort().forEach(p=>{
+    const opt = document.createElement('option'); opt.value = p; dl.appendChild(opt);
+  });
+}
+poblarDatalist();
+
+// Lee la base central de proveedores (Google Sheets) a través del Apps Script
+// Lee la respuesta del script. Si no es JSON (URL equivocada, script sin permisos,
+// implementación archivada...) da un mensaje entendible en lugar del error de Safari.
+async function leerJSON(resp){
+  const txt = await resp.text();
+  try { return JSON.parse(txt); }
+  catch(e){ throw new Error('El script no respondió bien. Revisá en ⚙️ Configuración que la URL sea la del script (empieza con https://script.google.com/ y termina en /exec). Si está bien, avisá a administración.'); }
+}
+
+async function cargarProveedores(){
+  const info = document.getElementById('baseInfo');
+  const scriptUrl = getScriptUrl();
+  if(!scriptUrl){ info.textContent = ''; return; }
+  const aplicar = lista => {
+    PROVEEDORES = lista.map(p=>p.nombre);
+    METODO_ACORDADO = {};
+    lista.forEach(p=>{ if(p.metodo) METODO_ACORDADO[p.nombre] = p.metodo; });
+    PROVEEDORES_NORM = PROVEEDORES.map(p => ({ original: p, norm: normalizarNombre(p) }));
+    armarIndicesRut(lista);
+    poblarDatalist();
+  };
+  // Copia guardada en este dispositivo: la página queda lista al instante
+  const CK = 'cache_prov_' + location.pathname;
+  let copia = null;
+  try{ copia = JSON.parse(localStorage.getItem(CK) || 'null'); }catch(e){ copia = null; }
+  if(copia && copia.lista && copia.lista.length){
+    aplicar(copia.lista);
+    info.textContent = `Base de proveedores: ${PROVEEDORES.length} (actualizando...)`;
+  } else {
+    info.textContent = 'Cargando base de proveedores...';
+  }
+  try{
+    const resp = await fetch(scriptUrl + '?accion=proveedores');
+    const result = await leerJSON(resp);
+    if(!result.ok || !result.proveedores || !result.proveedores.length) throw new Error(result.error || 'lista vacía');
+    aplicar(result.proveedores);
+    try{ localStorage.setItem(CK, JSON.stringify({ t: Date.now(), lista: result.proveedores })); }catch(e){}
+    info.textContent = `Base de proveedores: ${PROVEEDORES.length} (actualizada)`;
+  }catch(err){
+    console.warn('No se pudo leer la base central.', err);
+    info.textContent = (copia && copia.lista && copia.lista.length)
+      ? `Base de proveedores: ${PROVEEDORES.length} (copia guardada en este dispositivo)`
+      : `Base de proveedores: ${PROVEEDORES.length} (lista de respaldo — no se pudo leer la base central)`;
+  }
+}
+
+let currentPhotoBase64 = null;
+let currentPhotoMedia = null;
+let cameraStream = null;
+
+function toggleConfig(){
+  const c = document.getElementById('configCard');
+  c.style.display = c.style.display==='none' ? 'block' : 'none';
+}
+
+function cargarConfigGuardada(){
+  document.getElementById('cfgApiKey').value = localStorage.getItem('gemini_api_key') || '';
+  document.getElementById('cfgScriptUrl').value = localStorage.getItem('script_url_smart') || '';
+}
+
+// La URL del script tiene que ser la de Google Apps Script (termina en /exec),
+// no la dirección de esta página.
+function urlScriptValida(u){
+  return /^https:\/\/script\.google\.com\/(a\/[^\/\s]+\/)?macros\/s\/[A-Za-z0-9_\-]+\/exec$/.test(u || '');
+}
+
+function guardarConfig(){
+  const clave = document.getElementById('cfgApiKey').value.trim();
+  const url = document.getElementById('cfgScriptUrl').value.replace(/\s+/g, '');
+  if(!clave){ alert('Falta la clave de API de Gemini.'); return; }
+  if(!urlScriptValida(url)){
+    alert('La URL del script no es correcta.\n\nTiene que empezar con https://script.google.com/macros/s/ y terminar en /exec.\n\nOjo: no es la dirección de esta página (github.io).');
+    document.getElementById('cfgScriptUrl').focus();
+    return;
+  }
+  document.getElementById('cfgScriptUrl').value = url;
+  localStorage.setItem('gemini_api_key', clave);
+  localStorage.setItem('script_url_smart', url);
+  toggleConfig();
+  alert('Configuración guardada en este dispositivo.');
+  cargarProveedores();
+}
+
+function getApiKey(){ return localStorage.getItem('gemini_api_key') || ''; }
+function getScriptUrl(){ return localStorage.getItem('script_url_smart') || ''; }
+
+cargarConfigGuardada();
+if(!getApiKey() || !getScriptUrl()){ document.getElementById('configCard').style.display = 'block'; }
+else if(!urlScriptValida(getScriptUrl())){
+  document.getElementById('configCard').style.display = 'block';
+  setTimeout(()=>alert('La URL del script guardada en este dispositivo no es correcta.\n\nEn Configuración, pegá la URL que empieza con https://script.google.com/macros/s/ y termina en /exec, y tocá Guardar.'), 300);
+}
+cargarProveedores();
+
+async function abrirCamara(){
+  const wrap = document.getElementById('camaraWrap');
+  const video = document.getElementById('video');
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = cameraStream;
+    wrap.style.display = 'block';
+  }catch(err){
+    console.error(err);
+    let msg = 'No se pudo acceder a la cámara desde esta vista. ';
+    if(err.name === 'NotAllowedError') msg += 'Puede que hayas rechazado el permiso, o que este visor no lo permita — probá abrir el archivo directo en el navegador del celular.';
+    else if(err.name === 'NotFoundError') msg += 'No se encontró ninguna cámara en el dispositivo.';
+    else msg += 'Probá con "Elegir imagen" y seleccioná una foto ya tomada.';
+    alert(msg);
+  }
+}
+
+function cerrarCamara(){
+  const wrap = document.getElementById('camaraWrap');
+  wrap.style.display = 'none';
+  if(cameraStream){
+    cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream = null;
+  }
+}
+
+async function capturarFoto(){
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const maxDim = 1280;
+  let w = video.videoWidth, h = video.videoHeight;
+  if(w > h && w > maxDim){ h = Math.round(h * maxDim/w); w = maxDim; }
+  else if(h > maxDim){ w = Math.round(w * maxDim/h); h = maxDim; }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+  cerrarCamara();
+  await procesarImagen(dataUrl.split(',')[1], 'image/jpeg', 'Foto tomada con cámara');
+}
+
+function showTab(t){
+  document.getElementById('tabCargar').classList.toggle('active', t==='cargar');
+  document.getElementById('tabLista').classList.toggle('active', t==='lista');
+  document.getElementById('panelCargar').style.display = t==='cargar' ? 'block':'none';
+  document.getElementById('panelLista').style.display = t==='lista' ? 'block':'none';
+  if(t==='lista') renderLista();
+}
+
+function selectPill(el, group){
+  el.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const resized = await resizeImage(file, 1280);
+  await procesarImagen(resized.base64, resized.mediaType, file.name || 'Foto elegida');
+});
+
+async function procesarImagen(base64, mediaType, nombre){
+  currentPhotoBase64 = base64;
+  currentPhotoMedia = mediaType;
+
+  const previewWrap = document.getElementById('previewWrap');
+  previewWrap.innerHTML = `<div class="preview"><img src="data:${mediaType};base64,${base64}"><div class="info">${nombre}</div></div>`;
+
+  const statusWrap = document.getElementById('statusWrap');
+  statusWrap.innerHTML = `<div class="status busy"><div class="spinner"></div> Leyendo factura...</div>`;
+  document.getElementById('formCard').style.display = 'none';
+
+  try{
+    const data = await leerFactura(base64, mediaType);
+    llenarFormulario(data);
+    statusWrap.innerHTML = `<div class="status ok">✓ Datos leídos. Revisá y confirmá antes de guardar.</div>`;
+  }catch(err){
+    console.error(err);
+    statusWrap.innerHTML = `<div class="status warn">No se pudo leer automáticamente: ${escapeHtml(err.message || String(err))}</div>`;
+    llenarFormulario({});
+  }
+  document.getElementById('formCard').style.display = 'block';
+}
+
+function resizeImage(file, maxDim){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e)=>{ img.src = e.target.result; };
+    reader.onerror = reject;
+    img.onload = ()=>{
+      let w = img.width, h = img.height;
+      if(w > h && w > maxDim){ h = Math.round(h * maxDim/w); w = maxDim; }
+      else if(h > maxDim){ w = Math.round(w * maxDim/h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+      resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function leerFactura(base64, mediaType){
+  const prompt = `Esta imagen es una factura uruguaya (e-Factura o factura común). Extraé estos datos y respondé SOLO con un objeto JSON, sin texto adicional, sin backticks de markdown:
+{
+  "proveedor": "razón social del EMISOR de la factura tal cual figura impresa",
+  "rut": "RUT del EMISOR: 12 dígitos, solo números. Es el RUT de quien VENDE (arriba, junto al nombre del emisor). NUNCA el RUT COMPRADOR / RECEPTOR / CLIENTE",
+  "numero_factura": "número de factura, solo dígitos si es posible",
+  "fecha": "fecha de emisión en formato AAAA-MM-DD (las facturas son recientes: el año actual es ${new Date().getFullYear()}; mirá bien el año impreso)",
+  "moneda": "UYU o USD",
+  "importe_total": numero decimal del monto total de la factura, sin símbolo de moneda ni separador de miles
+}
+Si algún dato no es legible, poné null en ese campo. Si el nombre del proveedor aparece tachado o hay dos nombres (razón social y nombre de fantasía), priorizá la razón social asociada al RUT, no el nombre comercial.`;
+
+  const apiKey = getApiKey();
+  if(!apiKey) throw new Error('Falta configurar la clave de API de Gemini.');
+
+  const MODELOS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite'];
+  const errores = [];
+
+  for(const modelo of MODELOS){
+    try{
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mediaType, data: base64 } },
+              { text: prompt }
+            ]
+          }]
+        })
+      });
+      const data = await response.json();
+      if(data.error) throw new Error(data.error.message || 'Error de la API de Gemini');
+      const text = (data.candidates?.[0]?.content?.parts || []).map(p=>p.text||'').join('\n');
+      const clean = text.replace(/```json|```/g,'').trim();
+      return JSON.parse(clean);
+    }catch(err){
+      console.warn(`Falló ${modelo}, probando siguiente...`, err);
+      errores.push(`${modelo}: ${err.message}`);
+    }
+  }
+  throw new Error(errores.join(' | '));
+}
+
+function llenarFormulario(data){
+  document.getElementById('fProveedor').value = data.proveedor || '';
+  mostrarMetodoAcordado();
+  document.getElementById('fRut').value = data.rut || '';
+  cruzarRutConBase('foto');
+  document.getElementById('fNumero').value = data.numero_factura || '';
+  document.getElementById('fFecha').value = data.fecha || '';
+  mostrarAvisoFecha();
+  document.getElementById('fMoneda').value = (data.moneda === 'USD') ? 'USD' : 'UYU';
+  document.getElementById('fImporte').value = data.importe_total || '';
+  document.getElementById('fSector').value = '';
+  document.getElementById('fMetodo').value = '';
+  document.getElementById('fComentario').value = '';
+  document.querySelectorAll('#formCard .pill').forEach(p=>p.classList.remove('selected'));
+}
+
+function resetForm(){
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('previewWrap').innerHTML = '';
+  document.getElementById('statusWrap').innerHTML = '';
+  currentPhotoBase64 = null;
+  document.getElementById('fileInput').value = '';
+}
+
+// ---- Control de fecha: avisa si no es del mes actual o del anterior ----
+function controlarFecha(v){
+  if(!v) return '';
+  const d = new Date(v + 'T12:00:00');
+  if(isNaN(d)) return '';
+  const hoy = new Date();
+  const txt = d.toLocaleDateString('es-UY');
+  if(d.getTime() > hoy.getTime() + 2*86400000) return `La fecha de la factura (${txt}) es posterior a hoy.`;
+  const meses = (hoy.getFullYear() - d.getFullYear())*12 + (hoy.getMonth() - d.getMonth());
+  if(meses > 1) return `La fecha de la factura (${txt}) no es de este mes ni del anterior.`;
+  return '';
+}
+function mostrarAvisoFecha(){
+  const el = document.getElementById('fechaHint');
+  if(!el) return;
+  const msg = controlarFecha(document.getElementById('fFecha').value);
+  el.innerHTML = msg ? `<span style="color:var(--warn-ink); font-weight:600;">⚠️ ${msg} Revisá el año contra la factura.</span>` : '';
+}
+
+async function guardarFactura(){
+  const origenPill = document.querySelector('#formCard .pill.selected');
+  const origen = origenPill ? origenPill.dataset.val : null;
+  const proveedor = document.getElementById('fProveedor').value.trim();
+  const importe = document.getElementById('fImporte').value;
+
+  if(!origen){ alert('Elegí el origen: Bar Americano u Hotel.'); return; }
+  if(!proveedor){ alert('Falta el proveedor.'); return; }
+  if(!importe){ alert('Falta el importe.'); return; }
+  if(!document.getElementById('fMetodo').value){ alert('Elegí el método de pago (Crédito, Transferencia, Caja Chica...).'); document.getElementById('fMetodo').focus(); return; }
+
+  const avisoFecha = controlarFecha(document.getElementById('fFecha').value);
+  if(avisoFecha && !confirm(avisoFecha + '\n\n¿La fecha está bien? Tocá Cancelar para corregirla.')){ document.getElementById('fFecha').focus(); return; }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  const id = 'f' + Date.now() + Math.floor(Math.random()*1000);
+  const registro = {
+    id,
+    origen,
+    proveedor,
+    rut: document.getElementById('fRut').value.trim(),
+    numero: document.getElementById('fNumero').value.trim(),
+    fecha: document.getElementById('fFecha').value,
+    moneda: document.getElementById('fMoneda').value,
+    importe: parseFloat(importe),
+    sector: document.getElementById('fSector').value.trim(),
+    metodo: document.getElementById('fMetodo').value,
+    comentario: document.getElementById('fComentario').value.trim(),
+    foto: currentPhotoBase64 || null,
+    creado: new Date().toISOString()
+  };
+
+  try{
+    const scriptUrl = getScriptUrl();
+    if(!scriptUrl) throw new Error('Falta configurar la URL del Web App.');
+    let result = await leerJSON(await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ accion: 'guardar', registro })
+    }));
+    if(!result.ok && result.duplicado){
+      const d = result.detalle || {};
+      const seguir = confirm(`⚠️ Esta factura ya está cargada.\n\n${d.proveedor || ''} · N° ${registro.numero}\nCargada el ${d.cargada || ''} por ${d.moneda || ''} ${d.importe ?? ''}\n\nNo la cargues de nuevo salvo que sea otra factura distinta.\n¿Guardarla igual?`);
+      if(!seguir){ btn.disabled = false; btn.textContent = 'Guardar factura'; return; }
+      result = await leerJSON(await fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({ accion: 'guardar', registro, forzar: true })
+      }));
+    }
+    if(!result.ok) throw new Error(result.error || 'Error al guardar');
+    if(result.proveedorNuevo){
+      alert(`Factura guardada.\n\nEl proveedor "${proveedor}" no estaba en la base: quedó registrado como PENDIENTE para revisión de administración.`);
+    }
+    resetForm();
+    document.getElementById('statusWrap').innerHTML =
+      `<div class="status ok">✓ Factura guardada: ${escapeHtml(proveedor)} · ${registro.moneda} ${Number(registro.importe).toLocaleString('es-UY',{minimumFractionDigits:2})}. Ya podés cargar la siguiente.</div>`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }catch(err){
+    console.error(err);
+    alert('No se pudo guardar: ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = 'Guardar factura';
+}
+
+async function cargarTodas(){
+  try{
+    const scriptUrl = getScriptUrl();
+    if(!scriptUrl) return [];
+    const resp = await fetch(scriptUrl + '?accion=listar');
+    const result = await leerJSON(resp);
+    if(!result.ok) return [];
+    const regs = result.registros || [];
+    regs.sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+    return regs;
+  }catch(e){
+    console.error(e);
+    return [];
+  }
+}
+
+async function renderLista(){
+  const tbody = document.getElementById('tbodyFacturas');
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:16px;">Cargando...</td></tr>`;
+  let regs = await cargarTodas();
+  const filtro = document.getElementById('filtroOrigen').value;
+  if(filtro) regs = regs.filter(r=>r.origen===filtro);
+
+  document.getElementById('countLbl').textContent = `${regs.length} factura(s) cargada(s)`;
+
+  if(regs.length===0){
+    tbody.innerHTML = '';
+    document.getElementById('emptyMsg').style.display='block';
+    return;
+  }
+  document.getElementById('emptyMsg').style.display='none';
+
+  tbody.innerHTML = regs.map(r=>`
+    <tr>
+      <td>${r.fecha || '—'}</td>
+      <td><span class="origen-tag ${r.origen==='HOTEL'?'origen-hotel':'origen-bar'}">${r.origen}</span></td>
+      <td>${escapeHtml(r.proveedor)}</td>
+      <td>${escapeHtml(r.numero||'—')}</td>
+      <td class="num">${r.moneda} ${Number(r.importe).toLocaleString('es-UY',{minimumFractionDigits:2})}</td>
+      <td>${escapeHtml(r.metodo||'—')}</td>
+      <td><button class="del" onclick="borrarFactura('${r.id}')">Borrar</button></td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(s){
+  if(s===undefined || s===null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function borrarFactura(id){
+  if(!confirm('¿Borrar esta factura?')) return;
+  try{
+    const scriptUrl = getScriptUrl();
+    await fetch(scriptUrl, { method:'POST', body: JSON.stringify({ accion:'borrar', id }) });
+  }catch(e){ console.error(e); }
+  renderLista();
+}
+
+async function descargarCSV(){
+  let regs = await cargarTodas();
+  const filtro = document.getElementById('filtroOrigen').value;
+  if(filtro) regs = regs.filter(r=>r.origen===filtro);
+
+  const headers = ['Origen','Fecha','Proveedor','RUT','N° factura','Moneda','Importe','Sector','Metodo de pago','Comentario'];
+  const rows = regs.map(r=>[r.origen, r.fecha, r.proveedor, r.rut, r.numero, r.moneda, r.importe, r.sector, r.metodo, r.comentario]);
+  let csv = '\uFEFF' + headers.join(';') + '\n';
+  csv += rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'facturas_smart_hotel.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
